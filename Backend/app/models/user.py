@@ -1,0 +1,17 @@
+import uuid
+from sqlalchemy import Column, String, TIMESTAMP
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
+from app.database import Base
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    full_name = Column(String(100))
+    google_Id = Column(String(255), unique=True)
+    email = Column(String(255), unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    phone = Column(String(20))
+    deleted_at = Column(TIMESTAMP, nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
