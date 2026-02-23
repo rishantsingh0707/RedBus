@@ -1,13 +1,13 @@
 import uuid
-from sqlalchemy import Column, String, TIMESTAMP
+from sqlalchemy import Column, String, TIMESTAMP, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from app.database import Base
+from database import Base
 
 class Operator(Base):
     __tablename__ = "operators"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Integer, primary_key=True, index=True)
     name = Column(String(150), nullable=False)
     contact_email = Column(String(255))
     contact_phone = Column(String(20))

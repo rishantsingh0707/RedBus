@@ -1,11 +1,12 @@
 import uuid
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, TIMESTAMP, Integer
 from sqlalchemy.dialects.postgresql import UUID
-from app.database import Base
+from database import Base
 
 class City(Base):
     __tablename__ = "cities"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     state = Column(String(100))
+deleted_at = Column(TIMESTAMP, nullable=True)
