@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes import api_routes
 from contextlib import asynccontextmanager
 from database import engine, Base
+from Backend.routes.sms_routes import router as sms_router
 
 
 @asynccontextmanager
@@ -26,6 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(api_routes.router)
+app.include_router(sms_router)
 
 
 if __name__ == "__main__":
