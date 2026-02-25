@@ -1,11 +1,15 @@
 import random
-from schemas.user_schema import UserCreate, UserResponse, UserRegistrationResponse
+import smtplib
+from datetime import datetime, timedelta
+from email.mime.text import MIMEText
+
+from sqlalchemy.orm import Session
+
+from config import EMAIL_PASSWORD, EMAIL_USER
+from const.const import create_error, get_password_hash
 from models.user import User
 from models.verification_models import VerificationCode
-from database import get_db
-from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
-from const.const import *
+from schemas.user_schema import UserCreate
 def register_user_controller(user: UserCreate, db: Session):
 
     # 1️⃣ Check existing email
@@ -29,12 +33,20 @@ def register_user_controller(user: UserCreate, db: Session):
     db.refresh(new_user)
 
     # 4️⃣ Generate & send OTP
-    email_code = generate_verification_code(new_user.id, db, "email")
-    send_verification_email(new_user.email, email_code)
+    try:
+        email_code = generate_verification_code(new_user.id, db, "email")
+        send_verification_email(new_user.email, email_code)
 
-    if user.phone_number:
-        sms_code = generate_verification_code(new_user.id, db, "sms")
-        send_verification_sms(user.phone_number, sms_code)
+        if user.phone_number:
+            sms_code = generate_verification_code(new_user.id, db, "sms")
+            send_verification_sms(user.phone_number, sms_code)
+    except Exception:
+        # Keep registration atomic from client perspective:
+        # if delivery fails, remove created user + OTP records.
+        db.query(VerificationCode).filter(VerificationCode.user_id == new_user.id).delete()
+        db.delete(new_user)
+        db.commit()
+        raise
 
     return new_user
 
@@ -45,7 +57,7 @@ def generate_otp():
 
 def generate_verification_code(user_id: int, db: Session, verification_type: str):
     code = generate_otp()
-    expiration = datetime.utcnow() + timedelta(minutes=1)  # OTP valid for 1 minutes
+    expiration = datetime.utcnow() + timedelta(minutes=10)
     
     verification_code = VerificationCode(
         token=code,   # storing 6-digit code
@@ -59,17 +71,23 @@ def generate_verification_code(user_id: int, db: Session, verification_type: str
     
     return code
 def send_verification_email(email: str, code: str):
+    if not EMAIL_USER or not EMAIL_PASSWORD:
+        raise create_error(500, "Email service is not configured")
+
     message = MIMEText(f"Your verification code is: {code}\nThis code expires in 10 minutes.")
     message['Subject'] = 'Email Verification Code'
     message['From'] = EMAIL_USER
     message['To'] = email
 
-    with smtplib.SMTP('smtp.gmail.com', 587) as server:
-        server.starttls()
-        server.login(EMAIL_USER, EMAIL_PASSWORD)
-        server.send_message(message)
-    # except Exception as e:
-    #     print(f"Failed to send email: {e}")
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(EMAIL_USER, EMAIL_PASSWORD)
+            server.send_message(message)
+    except smtplib.SMTPAuthenticationError:
+        raise create_error(500, "Gmail authentication failed. Use an App Password in EMAIL_PASSWORD.")
+    except smtplib.SMTPException:
+        raise create_error(502, "Failed to send verification email")
 
 
 def send_verification_sms(phone_number: str, token: str):
