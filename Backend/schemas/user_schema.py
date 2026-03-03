@@ -1,27 +1,13 @@
-
-# models/auth_models.py
-import uuid
-from uuid import UUID
-from fastapi import Form
-from typing import Optional , List
+from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, BaseModel, EmailStr
-# from response.user_response import User_Response
-from fastapi.middleware.cors import CORSMiddleware
-
-# class UserCreate(BaseModel):
-#     first_name: str
-#     last_name: str
-#     email: EmailStr
-#     password: str
-#     phone: str
+from pydantic import BaseModel, EmailStr
 
 class UserResponse(BaseModel):
     id: int
-    first_name: str
-    last_name: str
+    full_name: Optional[str] = None
     email: str
-    phone: str
+    phone: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -37,12 +23,6 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: str | None = None
     email: str | None = None
-
-class UserRegistrationResponse(BaseModel):
-    user: UserResponse
-    message: str
-
-
 
 class UserCreate(BaseModel):
     email: str
